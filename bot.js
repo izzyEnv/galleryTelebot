@@ -61,6 +61,10 @@ mikrotikStatus(bot);
 const { deleteUser } = require('./deleteUser');
 deleteUser(bot);
 
+// register /useractive handler from userActive.js
+const { userActive } = require('./userActive');
+userActive(bot);
+
 // small test command to confirm bot is responding
 bot.command('ping', async (ctx) => {
   await ctx.reply('pong');
@@ -74,6 +78,7 @@ Berikut adalah daftar perintah yang tersedia:
 /start - Menampilkan pesan bantuan ini.
 /status - Menampilkan status dan resource dari router Mikrotik.
 /listuser - Menampilkan semua pengguna hotspot.
+/useractive - Menampilkan jumlah pengguna hotspot yang sedang aktif.
 /userdetail - Mencari dan menampilkan detail seorang pengguna.
 /adduser - Menambahkan pengguna hotspot baru secara interaktif.
 /deleteuser - Menghapus pengguna hotspot secara interaktif.
@@ -84,10 +89,15 @@ Berikut adalah daftar perintah yang tersedia:
 // Launch bot after all handlers are registered
 bot.launch();
 
-
-// ============================================================================
-// API ENDPOINTS
-// ============================================================================
+const {fetchUserActive} = require('./mikrotik');
+app.get("/api/active", async (req, res) => {
+  try {
+    const users = await fetchUserActive();
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
 
 // Get all hotspot users
 app.get("/api/users", async (req, res) => {

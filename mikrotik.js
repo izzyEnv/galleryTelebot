@@ -125,7 +125,21 @@ async function deleteHotspotUser(userName) {
   }
 }
 
-
+async function fetchUserActive(name) {
+  const api = new RouterOSClient(mikrotik);
+  try {
+    const client = await api.connect();
+    const users = await client.menu("/ip/hotspot/active").getAll();
+    if (name) {
+      return users.find(n => n && n.name === name) || null;
+    }
+    return users;
+  } finally {
+    try {
+      await api.close();
+    } catch (_) { }
+  }
+}
 
 module.exports = {
   fetchUserProfile,
@@ -133,5 +147,6 @@ module.exports = {
   fetchHotspotUsers,
   fetchSystemResource,
   addHotspotUser,
-  deleteHotspotUser
+  deleteHotspotUser,
+  fetchUserActive
 };
