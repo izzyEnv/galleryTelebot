@@ -66,6 +66,21 @@ bot.command('ping', async (ctx) => {
   await ctx.reply('pong');
 });
 
+
+bot.command("start", async (ctx) => {
+  const helpMessage = `Selamat datang di Bot Monitoring Mikrotik!
+
+Berikut adalah daftar perintah yang tersedia:
+/start - Menampilkan pesan bantuan ini.
+/status - Menampilkan status dan resource dari router Mikrotik.
+/listuser - Menampilkan semua pengguna hotspot.
+/userdetail - Mencari dan menampilkan detail seorang pengguna.
+/adduser - Menambahkan pengguna hotspot baru secara interaktif.
+/deleteuser - Menghapus pengguna hotspot secara interaktif.
+/ping - Memeriksa apakah bot aktif dan merespons.`;
+
+  await ctx.reply(helpMessage);
+})
 // Launch bot after all handlers are registered
 bot.launch();
 
