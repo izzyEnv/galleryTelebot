@@ -1,6 +1,5 @@
 # Bot Monitoring & Manajemen MikroTik
 
-[![Lisensi ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC)
 
 Bot Telegram yang dirancang untuk mempermudah monitoring dan manajemen pengguna hotspot di router MikroTik Anda, langsung dari Telegram. Proyek ini juga menyediakan REST API sederhana untuk integrasi lebih lanjut.
 
@@ -12,17 +11,13 @@ Bot Telegram yang dirancang untuk mempermudah monitoring dan manajemen pengguna 
 - **📄 Detail Pengguna**: Dapatkan informasi mendetail tentang pengguna tertentu.
 - **🤖 Interaktif**: Proses tambah dan hapus pengguna dilakukan melalui percakapan interaktif dengan bot.
 
-### REST API
-- **🔌 Endpoint Lengkap**: Menyediakan endpoint API untuk mendapatkan data pengguna, profil, dan status router.
-- **➕ Tambah Pengguna**: Endpoint untuk menambahkan pengguna baru melalui API.
 
 ## 🛠️ Teknologi yang Digunakan
 
-- **Backend**: Node.js, Express.js
+- **Backend**: Node.js
 - **Bot Framework**: Telegraf.js
 - **Koneksi MikroTik**: `routeros-client`
 - **Environment**: `dotenv`
-- **Lainnya**: `cors`
 
 ## ⚙️ Instalasi & Konfigurasi
 
@@ -34,7 +29,7 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini secara lokal.
 
 ### 2. Clone Repository
 ```bash
-git clone <URL_REPOSITORY_ANDA>
+git clone 
 cd monitoring-project
 ```
 
@@ -64,7 +59,6 @@ Setelah konfigurasi selesai, jalankan perintah berikut untuk memulai bot dan ser
 ```bash
 node bot.js
 ```
-*Catatan: `package.json` mungkin memiliki skrip `npm start` yang menjalankan `server.js`. Berdasarkan struktur saat ini, `bot.js` adalah file yang relevan untuk menjalankan bot dan server.*
 
 Server akan berjalan dan bot akan aktif. Anda bisa mulai berinteraksi dengannya di Telegram.
 
@@ -78,20 +72,7 @@ Server akan berjalan dan bot akan aktif. Anda bisa mulai berinteraksi dengannya 
 - `/deleteuser` - Menghapus pengguna hotspot secara interaktif.
 - `/ping` - Memeriksa apakah bot aktif dan merespons.
 
-## 🌐 Endpoint API
-
-Proyek ini juga menyediakan beberapa endpoint REST API:
-
-- `GET /api/status`: Mendapatkan status sumber daya sistem router.
-- `GET /api/users`: Mendapatkan daftar semua pengguna hotspot.
-- `GET /api/profile`: Mendapatkan daftar profil hotspot.
-- `GET /api/userProfile`: Mendapatkan daftar profil pengguna.
-- `POST /api/addusers`: Menambahkan pengguna hotspot baru (body: `{ "name": "user", "password": "pass", "profile": "default" }`).
 
 ## 🤝 Kontribusi
 
 Kontribusi, isu, dan permintaan fitur sangat diterima! Jangan ragu untuk membuat *issue* atau *pull request*.
-
-## 📄 Lisensi
-
-Proyek ini dilisensikan di bawah Lisensi ISC.
