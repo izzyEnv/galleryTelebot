@@ -30,7 +30,7 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek ini secara lokal.
 ### 2. Clone Repository
 ```bash
 git clone 
-cd monitoring-project
+cd monitoring-project-main
 ```
 
 ### 3. Instalasi Dependensi
@@ -71,6 +71,9 @@ Server akan berjalan dan bot akan aktif. Anda bisa mulai berinteraksi dengannya 
 - `/adduser` - Menambahkan pengguna hotspot baru secara interaktif.
 - `/deleteuser` - Menghapus pengguna hotspot secara interaktif.
 - `/ping` - Memeriksa apakah bot aktif dan merespons.
+- `/serverprofile` - Menampilkan data server profile hotspot.
+- `/userprofile` - Menampilkan data user profile hotspot.
+- `/interface` - Menampilkan daftar interface dan kecepatan internet di setiap interface.
 
 
 ## 🤝 Kontribusi

@@ -12,11 +12,12 @@ async function fetchHotspotProfile(name) {
   try {
     const client = await api.connect();
     const menu = client.menu("/ip/hotspot/profile");
-    const all = await menu.getAll();
+    const data = await menu.getAll();
+    console.log(data);
     if (name) {
-      return all.find(p => p && p.name === name) || null;
+      return data.find(p => p && p.name === name) || null;
     }
-    return all;
+    return data;
   } finally {
     try {
       await api.close();
@@ -30,6 +31,7 @@ async function fetchHotspotUsers(name) {
   try {
     const client = await api.connect();
     const users = await client.menu("/ip/hotspot/user").getAll();
+    console.log(users);
     if (name) {
       return users.find(n => n && n.name === name) || null;
       
@@ -49,6 +51,7 @@ async function fetchUserProfile(name) {
     const client = await api.connect();
     const menu = client.menu("/ip/hotspot/user/profile");
     const data = await menu.getAll();
+    console.log(data);
     if (name) {
       return data.find(p => p && p.name === name) || null;
     }
@@ -91,6 +94,7 @@ async function addHotspotUser(userData) {
       profile: profile || 'default',
       comment: comment || 'Added via Telegram Bot',
     });
+    console.log('User created:', newUser);
     return newUser;
   } finally {
     try {
@@ -119,6 +123,8 @@ async function deleteHotspotUser(userName) {
     }
 
     await menu.remove(found.id);
+    console.log(`User '${trimmed}' deleted successfully.`);
+
     return { message: `User '${trimmed}' deleted successfully.`, user: found };
   } finally {
     try { await api.close(); } catch {}
@@ -130,11 +136,54 @@ async function fetchUserActive(name) {
   try {
     const client = await api.connect();
     const users = await client.menu("/ip/hotspot/active").getAll();
+    console.log(users);
     if (name) {
       return users.find(n => n && n.name === name) || null;
     }
     return users;
   } finally {
+    try {
+      await api.close();
+    } catch (_) { }
+  }
+}
+
+async function fetchInterface(name) {
+  const api = new RouterOSClient(mikrotik);
+  try {
+    const client = await api.connect();
+    const menu = client.menu("/interface");
+    const data = await menu.getAll();
+    
+    if (name) {
+      return data.find(i => i && i.name === name) || null;
+    }
+    return data;
+  } finally {
+    try {
+      await api.close();
+    } catch (_) { }
+  }
+}
+
+
+async function addSimpleQueue(params) {
+  // Pastikan params berisi name, target, dan max-limit
+  if (!params.name || !params.target || !params['max-limit']) {
+    console.error("Error: Parameters 'name', 'target', and 'max-limit' are required.");
+    return;
+  }
+
+  const api = new RouterOSClient(mikrotik);
+  try {
+    const client = await api.connect();
+    // Menggunakan menu yang benar untuk Simple Queue
+    const menu = client.menu("/queue/simple"); 
+    const data = await menu.add(params);
+    console.log("Simple Queue added successfully:", data);
+  } catch (err) {
+    console.error("Error adding Simple Queue:", err);
+  } finally { 
     try {
       await api.close();
     } catch (_) { }
@@ -148,5 +197,7 @@ module.exports = {
   fetchSystemResource,
   addHotspotUser,
   deleteHotspotUser,
-  fetchUserActive
+  fetchUserActive,
+  addSimpleQueue,
+  fetchInterface,
 };

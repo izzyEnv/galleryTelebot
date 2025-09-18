@@ -5,6 +5,7 @@ function messageUser(profile) {
   const data = profile;
   return `📄 User Profile: ${data.name}
   speed limit: ${data.rateLimit || '-'}
+  queue: ${data.parentQueue || '-'}
 ⏱️Idle Timeout: ${data.idleTimeout}
 🫀 Keepalive Timeout: ${data.keepaliveTimeout}
 🔄 Status Autorefresh: ${data.statusAutorefresh}

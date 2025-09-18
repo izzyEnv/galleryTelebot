@@ -14,7 +14,10 @@ const {
   fetchUserProfile,
   fetchSystemResource,
   addUser,
-  detailHotspotProfile
+  detailHotspotProfile,
+  fetchInterface,
+  fetchUserActive,
+  fetchppp
 } = require("./mikrotik");
 
 // ============================================================================
@@ -65,9 +68,14 @@ deleteUser(bot);
 const { userActive } = require('./userActive');
 userActive(bot);
 
+// register /interfaces handler from interface.js
+const { interfaceMonitor } = require('./interface');
+interfaceMonitor(bot);
+
+
 // small test command to confirm bot is responding
 bot.command('ping', async (ctx) => {
-  await ctx.reply('pong');
+  await ctx.reply('WHAT UP NIGGA');
 });
 
 
@@ -82,14 +90,17 @@ Berikut adalah daftar perintah yang tersedia:
 /userdetail - Mencari dan menampilkan detail seorang pengguna.
 /adduser - Menambahkan pengguna hotspot baru secara interaktif.
 /deleteuser - Menghapus pengguna hotspot secara interaktif.
-/ping - Memeriksa apakah bot aktif dan merespons.`;
+/serverprofile - Menampilkan semua server hotspot yang tersedia.
+/userprofile - Menampilkan semua user profil hotspot yang tersedia.
+/interfaces - Menampilkan semua interface yang ada di router.
+/ping - Memeriksa apakah bot aktif dan merespons.
+/interface - Menampilkan daftar interface dan kecepatan internet di setiap interface`
 
   await ctx.reply(helpMessage);
 })
 // Launch bot after all handlers are registered
 bot.launch();
 
-const {fetchUserActive} = require('./mikrotik');
 app.get("/api/active", async (req, res) => {
   try {
     const users = await fetchUserActive();

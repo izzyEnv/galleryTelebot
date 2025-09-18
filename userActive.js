@@ -24,7 +24,7 @@ const userActive = (bot) => {
         // Format dengan Markdown, tambahkan \n untuk baris baru
         message += ` *User: ${userName}* 
 `;
-        message += ` *Alamat IP: ${userAddress}* 
+        message += ` *IP: ${userAddress}* 
 `;
         message += ` *Uptime: ${userUptime}* 
 
