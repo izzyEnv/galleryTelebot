@@ -1,5 +1,5 @@
-const {fetchSystemResource} = require('./mikrotik');
-const {formatUptime, toMiB, toGiB} = require('./function');
+const { fetchSystemResource } = require('./mikrotik');
+const { formatUptime, toMiB, toGiB } = require('./function');
 
 
 // tampilan pesan telegram bot
@@ -13,7 +13,7 @@ async function statusMessage() {
 🔢 Version: ${data.version}
 🕒 Uptime: ${formatUptime(data.uptime)}
 🧠 Memory/Ram: ${toMiB(data.freeMemory)} MiB / ${toMiB(data.totalMemory)} MiB
-💾 Disk/Penyimpanan: ${toGiB(data.freeHddSpace)} GiB / ${toGiB(data.totalHddSpace)} GiB
+💾 Disk/Penyimpanan: ${toMiB(data.freeHddSpace)} MiB / ${toMiB(data.totalHddSpace)} MiB
 ⚙️ CPU specification: ${data.cpu} (${data.cpuCount} cores @ ${data.cpuFrequency}MHz)
 🔺 CPU Load: ${data.cpuLoad}%`;
 }
@@ -32,4 +32,4 @@ function mikrotikStatus(bot) {
   });
 }
 
-module.exports = {mikrotikStatus};
+module.exports = { mikrotikStatus };

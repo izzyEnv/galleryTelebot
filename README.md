@@ -39,22 +39,14 @@ Jalankan perintah berikut untuk menginstal semua paket yang dibutuhkan.
 npm install
 ```
 
-### 4. Konfigurasi Environment
-Buat file bernama `.env` di direktori utama proyek, lalu salin dan isi variabel berikut sesuai dengan konfigurasi Anda.
+### 4. Konfigurasi
+edit file bernama `config.js`, dengan token bot dan kredensial mikrotik.
 
-```env
-# Token Bot Telegram Anda (dapatkan dari @BotFather)
-BOT_TOKEN=your_telegram_bot_token
 
-# Detail Login API MikroTik
-IP_MTK=your_mikrotik_ip
-USER_MTK=your_mikrotik_api_username
-PASS_MTK=your_mikrotik_api_password
-```
 
 ## 🚀 Menjalankan Proyek
 
-Setelah konfigurasi selesai, jalankan perintah berikut untuk memulai bot dan server API.
+Setelah konfigurasi selesai, jalankan perintah berikut untuk memulai bot.
 
 ```bash
 node bot.js

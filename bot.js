@@ -6,7 +6,7 @@ const { Markup } = require("telegraf");
 const cors = require("cors");
 const path = require("path");
 const { session } = require('telegraf');
-require("dotenv").config();
+
 
 const {
   fetchHotspotProfile,
@@ -31,16 +31,35 @@ app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "src")));
 
 
-
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const { tokenBot } = require("./config.js")
+const bot = new Telegraf(tokenBot)
 bot.use(session());
-const mikrotik = {
-  host: process.env.IP_MTK,
-  user: process.env.USER_MTK,
-  password: process.env.PASS_MTK,
-};
+const { mikrotik } = require("./config.js")
 
-const {addMikrotikUser} = require('./addUser');
+bot.command("start", async (ctx) => {
+  const helpMessage = `Selamat datang di Bot Monitoring Mikrotik!
+
+Berikut adalah daftar perintah yang tersedia:
+/start - Menampilkan pesan bantuan ini.
+/status - Menampilkan status dan resource dari router Mikrotik.
+/listuser - Menampilkan semua pengguna hotspot.
+/useractive - Menampilkan jumlah pengguna hotspot yang sedang aktif.
+/userdetail - Mencari dan menampilkan detail seorang pengguna.
+/adduser - Menambahkan pengguna hotspot baru secara interaktif.
+/deleteuser - Menghapus pengguna hotspot secara interaktif.
+/serverprofile - Menampilkan semua server hotspot yang tersedia.
+/userprofile - Menampilkan semua user profil hotspot yang tersedia.
+/interfaces - Menampilkan semua interface yang ada di router.
+/ping - Memeriksa apakah bot aktif dan merespons.
+/interface - Menampilkan daftar interface dan kecepatan internet di setiap interface`
+
+  await ctx.reply(helpMessage);
+})
+
+
+
+
+const { addMikrotikUser } = require('./addUser');
 addMikrotikUser(bot);
 
 // register /userdetail handler from detailUser.js
@@ -79,25 +98,7 @@ bot.command('ping', async (ctx) => {
 });
 
 
-bot.command("start", async (ctx) => {
-  const helpMessage = `Selamat datang di Bot Monitoring Mikrotik!
 
-Berikut adalah daftar perintah yang tersedia:
-/start - Menampilkan pesan bantuan ini.
-/status - Menampilkan status dan resource dari router Mikrotik.
-/listuser - Menampilkan semua pengguna hotspot.
-/useractive - Menampilkan jumlah pengguna hotspot yang sedang aktif.
-/userdetail - Mencari dan menampilkan detail seorang pengguna.
-/adduser - Menambahkan pengguna hotspot baru secara interaktif.
-/deleteuser - Menghapus pengguna hotspot secara interaktif.
-/serverprofile - Menampilkan semua server hotspot yang tersedia.
-/userprofile - Menampilkan semua user profil hotspot yang tersedia.
-/interfaces - Menampilkan semua interface yang ada di router.
-/ping - Memeriksa apakah bot aktif dan merespons.
-/interface - Menampilkan daftar interface dan kecepatan internet di setiap interface`
-
-  await ctx.reply(helpMessage);
-})
 // Launch bot after all handlers are registered
 bot.launch();
 
@@ -170,7 +171,7 @@ app.post("/api/addusers", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🤖 Telegram bot is active`);
-  console.log(`📡 MikroTik connection configured for: ${mikrotik.host}`);
+  console.log(`📡 MikroTik connection configured for: ${mikrotik.ip}`);
 });
 // ============================================================================
 // GRACEFUL SHUTDOWN
