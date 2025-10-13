@@ -420,7 +420,7 @@ class HotspotLogMonitor {
             switch (buttonText) {
                 case '⏹️ Stop Monitoring':
                     const stopResult = await this.stopRealTimeMonitoring(bot, chatId);
-                    await ctx.reply(stopResult.message);
+                    await ctx.reply(stopResult.message, { reply_markup: { remove_keyboard: true } });
                     break;
 
                 case '📊 Status Monitoring':
