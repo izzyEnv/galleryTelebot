@@ -17,8 +17,11 @@ const {
   detailHotspotProfile,
   fetchInterface,
   fetchUserActive,
-  fetchppp
+  fetchppp,
+  monitorHotspotUserActivity
 } = require("./mikrotik");
+
+const HotspotLogMonitor = require("./hotpot_monitor");
 
 // ============================================================================
 // EXPRESS APP SETUP
@@ -36,6 +39,9 @@ const bot = new Telegraf(tokenBot)
 bot.use(session());
 const { mikrotik } = require("./config.js")
 
+// Inisialisasi monitor log hotspot
+const logMonitor = new HotspotLogMonitor();
+
 bot.command("start", async (ctx) => {
   const helpMessage = `Selamat datang di Bot Monitoring Mikrotik!
 
@@ -48,10 +54,8 @@ Berikut adalah daftar perintah yang tersedia:
 /adduser - Menambahkan pengguna hotspot baru secara interaktif.
 /deleteuser - Menghapus pengguna hotspot secara interaktif.
 /serverprofile - Menampilkan semua server hotspot yang tersedia.
-/userprofile - Menampilkan semua user profil hotspot yang tersedia.
-/interfaces - Menampilkan semua interface yang ada di router.
-/ping - Memeriksa apakah bot aktif dan merespons.
-/interface - Menampilkan daftar interface dan kecepatan internet di setiap interface`
+/monitor - Mulai monitoring real-time log hotspot (login/logout).
+`
 
   await ctx.reply(helpMessage);
 })
@@ -88,16 +92,73 @@ const { userActive } = require('./userActive');
 userActive(bot);
 
 // register /interfaces handler from interface.js
-const { interfaceMonitor } = require('./interface');
+const { interfaceMonitor } = require('./monitor_interface.js');
 interfaceMonitor(bot);
 
 
 // small test command to confirm bot is responding
 bot.command('ping', async (ctx) => {
-  await ctx.reply('WHAT UP NIGGA');
+  await ctx.reply('WHAT NIGGA');
 });
 
+// ============================================================================
+// MONITORING COMMANDS
+// ============================================================================
 
+// Command untuk mulai monitoring real-time
+bot.command("monitor", async (ctx) => {
+  try {
+    const chatId = ctx.chat.id;
+
+    // Cek status monitoring
+    const status = logMonitor.getMonitoringStatus();
+
+    if (status.isMonitoring) {
+      await ctx.reply('⚠️ Monitoring sudah aktif!', {
+        reply_markup: logMonitor.getMonitoringKeyboard()
+      });
+      return;
+    }
+
+    // Mulai monitoring real-time
+    const result = await logMonitor.startRealTimeMonitoring(bot, chatId, {
+      interval: 3000,        // Check setiap 3 detik
+      maxLogs: 10,           // Maksimal 10 log per check
+      filterEvents: ['login', 'logout'],
+      includeFailed: true
+    });
+
+    if (result.success) {
+      console.log(`✅ Monitoring started for chat ${chatId}`);
+    } else {
+      await ctx.reply(result.message);
+    }
+
+  } catch (error) {
+    console.error("Error in monitor command:", error);
+    await ctx.reply("❌ Gagal memulai monitoring. Silakan coba lagi.");
+  }
+});
+
+// Handler untuk keyboard callback
+bot.on('text', async (ctx) => {
+  try {
+    const buttonText = ctx.message.text;
+
+    // Cek apakah text adalah button dari keyboard
+    if (buttonText.includes('Monitoring') ||
+      buttonText.includes('Stop') ||
+      buttonText.includes('Status') ||
+      buttonText.includes('Bantuan') ||
+      buttonText.includes('Start')) {
+
+      await logMonitor.handleKeyboardCallback(bot, ctx, buttonText);
+    }
+
+  } catch (error) {
+    console.error("Error handling keyboard callback:", error);
+  }
+});
 
 // Launch bot after all handlers are registered
 bot.launch();
@@ -166,12 +227,10 @@ app.post("/api/addusers", async (req, res) => {
 
 
 
-
-
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🤖 Telegram bot is active`);
-  console.log(`📡 MikroTik connection configured for: ${mikrotik.ip}`);
+  console.log(`📡 MikroTik connection configured for: ${mikrotik.host}`);
 });
 // ============================================================================
 // GRACEFUL SHUTDOWN

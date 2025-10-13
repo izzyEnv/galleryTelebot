@@ -213,33 +213,287 @@ async function fetchInterface(name) {
 }
 
 
-async function addSimpleQueue(params) {
-  // Pastikan params berisi name, target, dan max-limit
-  if (!params.name || !params.target || !params['max-limit']) {
-    const error = new Error("Parameters 'name', 'target', and 'max-limit' are required.");
-    console.error('Error in addSimpleQueue - validation failed:', error.message);
-    throw error;
-  }
+// async function addSimpleQueue(params) {
+//   // Pastikan params berisi name, target, dan max-limit
+//   if (!params.name || !params.target || !params['max-limit']) {
+//     const error = new Error("Parameters 'name', 'target', and 'max-limit' are required.");
+//     console.error('Error in addSimpleQueue - validation failed:', error.message);
+//     throw error;
+//   }
+
+//   const api = new RouterOSClient(mikrotik);
+//   try {
+//     const client = await api.connect();
+//     // Menggunakan menu yang benar untuk Simple Queue
+//     const menu = client.menu("/queue/simple");
+//     const data = await menu.add(params);
+//     console.log("Simple Queue added successfully:", data);
+//     return data;
+//   } catch (error) {
+//     console.error('Error in addSimpleQueue:', error);
+//     throw error;
+//   } finally {
+//     try {
+//       await api.close();
+//     } catch (closeError) {
+//       console.error('Error closing API connection in addSimpleQueue:', closeError);
+//     }
+//   }
+// }
+
+
+// Fungsi untuk mengambil log hotspot (login/logout)
+async function fetchHotspotLog(options = {}) {
+  const {
+    limit = 100,           // Jumlah maksimal log yang diambil
+    fromTime,             // Waktu mulai (format: jan/01/2024 10:00:00)
+    toTime,               // Waktu akhir
+    user,                 // Filter berdasarkan username
+    topic                 // Filter berdasarkan topic (hotspot, info, etc.)
+  } = options;
 
   const api = new RouterOSClient(mikrotik);
   try {
     const client = await api.connect();
-    // Menggunakan menu yang benar untuk Simple Queue
-    const menu = client.menu("/queue/simple");
-    const data = await menu.add(params);
-    console.log("Simple Queue added successfully:", data);
-    return data;
+    const menu = client.menu("/log");
+    
+    // Membuat query parameters
+    const queryParams = [];
+    
+    if (limit) {
+      queryParams.push(`?limit=${limit}`);
+    }
+    
+    if (fromTime) {
+      queryParams.push(`?from=${fromTime}`);
+    }
+    
+    if (toTime) {
+      queryParams.push(`?to=${toTime}`);
+    }
+    
+    if (user) {
+      queryParams.push(`?where="user"="${user}"`);
+    }
+    
+    if (topic) {
+      queryParams.push(`?where="topics"="${topic}"`);
+    }
+    
+    // Mengambil log dari MikroTik
+    const logs = await menu.getAll(queryParams);
+    
+    // Filter log yang berkaitan dengan hotspot (login/logout)
+    const hotspotLogs = logs.filter(log => {
+      const message = log.message ? log.message.toLowerCase() : '';
+      const topics = log.topics ? log.topics.toLowerCase() : '';
+      
+      return (
+        topics.includes('hotspot') ||
+        message.includes('login') ||
+        message.includes('logout') ||
+        message.includes('hotspot')
+      );
+    });
+    
+    console.log(`Found ${hotspotLogs.length} hotspot-related logs`);
+    return hotspotLogs;
+    
   } catch (error) {
-    console.error('Error in addSimpleQueue:', error);
+    console.error('Error in fetchHotspotLog:', error);
     throw error;
   } finally {
     try {
       await api.close();
     } catch (closeError) {
-      console.error('Error closing API connection in addSimpleQueue:', closeError);
+      console.error('Error closing API connection in fetchHotspotLog:', closeError);
     }
   }
 }
+
+// Fungsi khusus untuk monitoring real-time log user hotspot (login/logout)
+async function monitorHotspotUserActivity(options = {}) {
+  const {
+    interval = 5000,        // Interval check dalam milliseconds (default: 5 detik)
+    maxLogs = 5,           // Maksimal log yang diproses per interval
+    callback,               // Callback function untuk notifikasi
+    filterEvents = ['login', 'logout'], // Event yang dimonitor
+    includeFailed = true   // Include failed login attempts
+  } = options;
+
+  let lastCheckTime = new Date();
+  let isMonitoring = false;
+  let monitorInterval = null;
+  let knownLogs = new Set(); // Untuk menghindari duplikasi
+
+  console.log('🔍 Starting hotspot user activity monitoring...');
+
+  const startMonitoring = async () => {
+    if (isMonitoring) {
+      console.log('⚠️ Monitoring already active');
+      return;
+    }
+
+    isMonitoring = true;
+    console.log(`📊 Monitoring started - checking every ${interval}ms`);
+
+    monitorInterval = setInterval(async () => {
+      try {
+        await checkForNewActivity();
+      } catch (error) {
+        console.error('❌ Error in monitoring interval:', error);
+      }
+    }, interval);
+  };
+
+  const stopMonitoring = () => {
+    if (monitorInterval) {
+      clearInterval(monitorInterval);
+      monitorInterval = null;
+    }
+    isMonitoring = false;
+    console.log('⏹️ Monitoring stopped');
+  };
+
+  const checkForNewActivity = async () => {
+    try {
+      const now = new Date();
+      const fromTime = lastCheckTime.toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric'
+      }).toLowerCase() + ` ${lastCheckTime.toLocaleTimeString('en-GB')}`;
+
+      // Ambil log hotspot terbaru
+      const logs = await fetchHotspotLog({
+        limit: maxLogs,
+        fromTime: fromTime
+      });
+
+      // Filter log yang belum pernah dilihat
+      const newLogs = logs.filter(log => {
+        const logId = `${log.time}_${log.message}`;
+        if (!knownLogs.has(logId)) {
+          knownLogs.add(logId);
+          return true;
+        }
+        return false;
+      });
+
+      if (newLogs.length > 0) {
+        // Process new logs
+        const processedLogs = processUserActivityLogs(newLogs, filterEvents, includeFailed);
+
+        if (processedLogs.length > 0) {
+          console.log(`🔔 Found ${processedLogs.length} new user activities`);
+
+          // Call callback if provided
+          if (callback && typeof callback === 'function') {
+            callback(processedLogs);
+          }
+        }
+      }
+
+      lastCheckTime = now;
+    } catch (error) {
+      console.error('❌ Error checking for new activity:', error);
+    }
+  };
+
+  const processUserActivityLogs = (logs, filterEvents, includeFailed) => {
+    const processedLogs = [];
+
+    logs.forEach(log => {
+      const message = log.message || '';
+      const timestamp = log.time || '';
+      const topics = log.topics || '';
+
+      // Extract username dari message
+      const userMatch = message.match(/user[=:\s]+([^\s,]+)/i);
+      const username = userMatch ? userMatch[1] : 'unknown';
+
+      // Determine event type
+      let eventType = 'unknown';
+      let isRelevant = false;
+
+      if (message.toLowerCase().includes('login') && filterEvents.includes('login')) {
+        eventType = 'login';
+        isRelevant = true;
+      } else if (message.toLowerCase().includes('logout') && filterEvents.includes('logout')) {
+        eventType = 'logout';
+        isRelevant = true;
+      } else if (message.toLowerCase().includes('failed') && includeFailed) {
+        eventType = 'failed';
+        isRelevant = true;
+      }
+
+      if (isRelevant && username !== 'unknown') {
+        const processedLog = {
+          timestamp,
+          username,
+          eventType,
+          message,
+          topics,
+          ip: extractIPFromMessage(message),
+          mac: extractMacFromMessage(message),
+          raw: log,
+          formattedMessage: formatActivityMessage(eventType, username, timestamp, message)
+        };
+
+        processedLogs.push(processedLog);
+      }
+    });
+
+    return processedLogs;
+  };
+
+  const extractIPFromMessage = (message) => {
+    const ipMatch = message.match(/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/);
+    return ipMatch ? ipMatch[1] : null;
+  };
+
+  const extractMacFromMessage = (message) => {
+    const macMatch = message.match(/([0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2}:[0-9a-fA-F]{2})/);
+    return macMatch ? macMatch[1] : null;
+  };
+
+  const formatActivityMessage = (eventType, username, timestamp, message) => {
+    const icon = {
+      'login': '🔓',
+      'logout': '🔒',
+      'failed': '❌'
+    }[eventType] || '📝';
+
+    const action = {
+      'login': 'logged in',
+      'logout': 'logged out',
+      'failed': 'login failed'
+    }[eventType] || 'activity';
+
+    return `${icon} User **${username}** ${action} at ${timestamp}`;
+  };
+
+  // Return monitoring control object
+  return {
+    start: startMonitoring,
+    stop: stopMonitoring,
+    isActive: () => isMonitoring,
+    getStats: () => ({
+      isMonitoring,
+      lastCheckTime,
+      knownLogsCount: knownLogs.size,
+      interval
+    }),
+    clearHistory: () => {
+      knownLogs.clear();
+      console.log('🗑️ Monitoring history cleared');
+    }
+  };
+}
+
+
+
+
 
 module.exports = {
   fetchUserProfile,
@@ -249,6 +503,7 @@ module.exports = {
   addHotspotUser,
   deleteHotspotUser,
   fetchUserActive,
-  addSimpleQueue,
   fetchInterface,
+  fetchHotspotLog,
+  monitorHotspotUserActivity,
 };
