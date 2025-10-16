@@ -223,7 +223,15 @@ app.post("/api/addusers", async (req, res) => {
   }
 });
 
-
+const { fetchLog } = require("./mikrotik");
+app.get("/api/log", async (req, res) => {
+  try {
+    const log = await fetchLog();
+    res.json(log);
+  } catch (err) {
+    res.status(500).json({ error: err.message || err });
+  }
+});
 
 
 

@@ -2,8 +2,8 @@
 const tokenBot = "8068694348:AAH5lg77S4F_5HMB10MPHKgbLxKaJTjKC0A"
 // isi dengan ip mikrotik dan username dan password untuk login ke mikrotik
 const mikrotik = {
-    host: "192.168.2.1",
-    user: "api",
+    host: "192.168.1.1",
+    user: "admin",
     password: "123",
 };
 

@@ -211,36 +211,25 @@ async function fetchInterface(name) {
     }
   }
 }
+async function fetchLog() {
 
-
-// async function addSimpleQueue(params) {
-//   // Pastikan params berisi name, target, dan max-limit
-//   if (!params.name || !params.target || !params['max-limit']) {
-//     const error = new Error("Parameters 'name', 'target', and 'max-limit' are required.");
-//     console.error('Error in addSimpleQueue - validation failed:', error.message);
-//     throw error;
-//   }
-
-//   const api = new RouterOSClient(mikrotik);
-//   try {
-//     const client = await api.connect();
-//     // Menggunakan menu yang benar untuk Simple Queue
-//     const menu = client.menu("/queue/simple");
-//     const data = await menu.add(params);
-//     console.log("Simple Queue added successfully:", data);
-//     return data;
-//   } catch (error) {
-//     console.error('Error in addSimpleQueue:', error);
-//     throw error;
-//   } finally {
-//     try {
-//       await api.close();
-//     } catch (closeError) {
-//       console.error('Error closing API connection in addSimpleQueue:', closeError);
-//     }
-//   }
-// }
-
+  const api = new RouterOSClient(mikrotik);
+  try {
+    const client = await api.connect();
+    const menu = client.menu("/log");
+    const data = await menu.getAll();
+    return data;
+  } catch (error) {
+    console.error('Error in fetchLog:', error);
+    throw error;
+  } finally {
+    try {
+      await api.close();
+    } catch (closeError) {
+      console.error('Error closing API connection in fetchLog:', closeError);
+    }
+  }
+}
 
 // Fungsi untuk mengambil log hotspot (login/logout)
 async function fetchHotspotLog(options = {}) {
@@ -256,38 +245,38 @@ async function fetchHotspotLog(options = {}) {
   try {
     const client = await api.connect();
     const menu = client.menu("/log");
-    
+
     // Membuat query parameters
     const queryParams = [];
-    
+
     if (limit) {
       queryParams.push(`?limit=${limit}`);
     }
-    
+
     if (fromTime) {
       queryParams.push(`?from=${fromTime}`);
     }
-    
+
     if (toTime) {
       queryParams.push(`?to=${toTime}`);
     }
-    
+
     if (user) {
       queryParams.push(`?where="user"="${user}"`);
     }
-    
+
     if (topic) {
       queryParams.push(`?where="topics"="${topic}"`);
     }
-    
+
     // Mengambil log dari MikroTik
     const logs = await menu.getAll(queryParams);
-    
+
     // Filter log yang berkaitan dengan hotspot (login/logout)
     const hotspotLogs = logs.filter(log => {
       const message = log.message ? log.message.toLowerCase() : '';
       const topics = log.topics ? log.topics.toLowerCase() : '';
-      
+
       return (
         topics.includes('hotspot') ||
         message.includes('login') ||
@@ -295,10 +284,10 @@ async function fetchHotspotLog(options = {}) {
         message.includes('hotspot')
       );
     });
-    
+
     console.log(`Found ${hotspotLogs.length} hotspot-related logs`);
     return hotspotLogs;
-    
+
   } catch (error) {
     console.error('Error in fetchHotspotLog:', error);
     throw error;
@@ -506,4 +495,5 @@ module.exports = {
   fetchInterface,
   fetchHotspotLog,
   monitorHotspotUserActivity,
+  fetchLog,
 };
