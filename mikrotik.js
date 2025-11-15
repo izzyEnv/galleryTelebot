@@ -1,4 +1,4 @@
-const { RouterOSClient } = require("routeros-client");
+const { RouterOSAPI } = require("routeros-api");
 const { mikrotik } = require("./config.js")
 
 const { ip, user, password } = mikrotik
@@ -6,12 +6,10 @@ const { ip, user, password } = mikrotik
 
 // ambil data userprofile dari mikrotik
 async function fetchHotspotProfile(name) {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu("/ip/hotspot/profile");
-    const data = await menu.getAll();
-    console.log(data);
+    await conn.connect();
+    const data = await conn.write("/ip/hotspot/profile/print");
     if (name) {
       return data.find(p => p && p.name === name) || null;
     }
@@ -21,7 +19,7 @@ async function fetchHotspotProfile(name) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchHotspotProfile:', closeError);
     }
@@ -30,14 +28,12 @@ async function fetchHotspotProfile(name) {
 
 
 async function fetchHotspotUsers(name) {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const users = await client.menu("/ip/hotspot/user").getAll();
-    console.log(users);
+    await conn.connect();
+    const users = await conn.write("/ip/hotspot/user/print");
     if (name) {
       return users.find(n => n && n.name === name) || null;
-
     }
     return users;
   } catch (error) {
@@ -45,7 +41,7 @@ async function fetchHotspotUsers(name) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchHotspotUsers:', closeError);
     }
@@ -54,12 +50,10 @@ async function fetchHotspotUsers(name) {
 
 
 async function fetchUserProfile(name) {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu("/ip/hotspot/user/profile");
-    const data = await menu.getAll();
-    console.log(data);
+    await conn.connect();
+    const data = await conn.write("/ip/hotspot/user/profile/print");
     if (name) {
       return data.find(p => p && p.name === name) || null;
     }
@@ -69,7 +63,7 @@ async function fetchUserProfile(name) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchUserProfile:', closeError);
     }
@@ -79,17 +73,17 @@ async function fetchUserProfile(name) {
 
 
 async function fetchSystemResource() {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const resource = await client.menu("/system/resource").getAll();
+    await conn.connect();
+    const resource = await conn.write("/system/resource/print");
     return resource;
   } catch (error) {
     console.error('Error in fetchSystemResource:', error);
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchSystemResource:', closeError);
     }
@@ -105,15 +99,15 @@ async function addHotspotUser(userData) {
     throw error;
   }
 
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const newUser = await client.menu('/ip/hotspot/user').add({
-      name,
-      password,
-      profile: profile || 'default',
-      comment: comment || 'Added via Telegram Bot',
-    });
+    await conn.connect();
+    const newUser = await conn.write('/ip/hotspot/user/add', [
+      `=name=${name}`,
+      `=password=${password}`,
+      `=profile=${profile || 'default'}`,
+      `=comment=${comment || 'Added via Telegram Bot'}`,
+    ]);
     console.log('User created:', newUser);
     return newUser;
   } catch (error) {
@@ -121,7 +115,7 @@ async function addHotspotUser(userData) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in addHotspotUser:', closeError);
     }
@@ -139,19 +133,18 @@ async function deleteHotspotUser(userName) {
   }
   const trimmed = userName.trim();
 
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu('/ip/hotspot/user');
+    await conn.connect();
 
-    const [found] = await menu.where('name', trimmed).get();
+    const [found] = await conn.write('/ip/hotspot/user/print', [`?name=${trimmed}`]);
     if (!found) {
       const error = new Error(`User '${trimmed}' not found.`);
       console.error('Error in deleteHotspotUser - user not found:', error.message);
       throw error;
     }
 
-    await menu.remove(found.id);
+    await conn.write('/ip/hotspot/user/remove', [`=.id=${found['.id']}`]);
     console.log(`User '${trimmed}' deleted successfully.`);
 
     return { message: `User '${trimmed}' deleted successfully.`, user: found };
@@ -160,7 +153,7 @@ async function deleteHotspotUser(userName) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in deleteHotspotUser:', closeError);
     }
@@ -168,11 +161,10 @@ async function deleteHotspotUser(userName) {
 }
 
 async function fetchUserActive(name) {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const users = await client.menu("/ip/hotspot/active").getAll();
-    console.log(users);
+    await conn.connect();
+    const users = await conn.write("/ip/hotspot/active/print");
     if (name) {
       return users.find(n => n && n.name === name) || null;
     }
@@ -182,7 +174,7 @@ async function fetchUserActive(name) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchUserActive:', closeError);
     }
@@ -190,13 +182,12 @@ async function fetchUserActive(name) {
 }
 
 async function fetchInterface(name) {
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu("/interface");
-    const data = await menu.getAll();
-
+    await conn.connect();
+    const data = await conn.write("/interface/print");
     if (name) {
+      // Untuk mendapatkan data traffic real-time, Anda mungkin perlu perintah yang berbeda
       return data.find(i => i && i.name === name) || null;
     }
     return data;
@@ -205,7 +196,7 @@ async function fetchInterface(name) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchInterface:', closeError);
     }
@@ -213,18 +204,17 @@ async function fetchInterface(name) {
 }
 async function fetchLog() {
 
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu("/log");
-    const data = await menu.getAll();
+    await conn.connect();
+    const data = await conn.write("/log/print");
     return data;
   } catch (error) {
     console.error('Error in fetchLog:', error);
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchLog:', closeError);
     }
@@ -241,36 +231,23 @@ async function fetchHotspotLog(options = {}) {
     topic                 // Filter berdasarkan topic (hotspot, info, etc.)
   } = options;
 
-  const api = new RouterOSClient(mikrotik);
+  const conn = new RouterOSAPI(mikrotik);
   try {
-    const client = await api.connect();
-    const menu = client.menu("/log");
+    await conn.connect();
 
-    // Membuat query parameters
-    const queryParams = [];
+    const query = ['/log/print'];
+    const conditions = [];
 
-    if (limit) {
-      queryParams.push(`?limit=${limit}`);
-    }
-
-    if (fromTime) {
-      queryParams.push(`?from=${fromTime}`);
-    }
-
-    if (toTime) {
-      queryParams.push(`?to=${toTime}`);
-    }
-
-    if (user) {
-      queryParams.push(`?where="user"="${user}"`);
-    }
-
+    // `routeros-api` tidak mendukung semua parameter query kompleks secara langsung
+    // Filtering mungkin perlu dilakukan di sisi client
     if (topic) {
-      queryParams.push(`?where="topics"="${topic}"`);
+      conditions.push(`?topics=${topic}`);
+    }
+     if (user) {
+      conditions.push(`?user=${user}`);
     }
 
-    // Mengambil log dari MikroTik
-    const logs = await menu.getAll(queryParams);
+    const logs = await conn.write(query.concat(conditions));
 
     // Filter log yang berkaitan dengan hotspot (login/logout)
     const hotspotLogs = logs.filter(log => {
@@ -293,7 +270,7 @@ async function fetchHotspotLog(options = {}) {
     throw error;
   } finally {
     try {
-      await api.close();
+      if (conn.connected) conn.close();
     } catch (closeError) {
       console.error('Error closing API connection in fetchHotspotLog:', closeError);
     }

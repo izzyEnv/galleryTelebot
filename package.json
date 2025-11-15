@@ -14,7 +14,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "qrcode": "^1.5.4",
-    "routeros-client": "^1.1.1",
+    "routeros-api": "^1.0.2",
     "telegraf": "^4.16.3"
   }
 }
