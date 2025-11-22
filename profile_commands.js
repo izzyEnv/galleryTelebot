@@ -10,20 +10,20 @@ class ProfileCommands {
 
   formatServerProfileMessage(data) {
     return `📄 Server Profile: ${data.name}\n` +
-      `🏠 Hotspot Address: ${data.hotspotAddress}\n` +
-      `🌐 DNS Name: ${data.dnsName}\n` +
-      `📁 HTML Directory: ${data.htmlDirectory}\n` +
-      `🔐 Login By: ${data.loginBy}`;
+      `🏠 Hotspot Address: ${data['hotspot-address'] || 'N/A'}\n` +
+      `🌐 DNS Name: ${data['dns-name']}\n` +
+      `📁 HTML Directory: ${data['html-directory'] || 'N/A'}\n` +
+      `🔐 Login By: ${data['login-by'] || 'N/A'}\n` +
+      `📡 Use Radius: ${data['use-radius'] === 'true' ? 'Yes' : 'No'}`;
   }
 
   formatUserProfileMessage(data) {
     return `📄 User Profile: ${data.name}\n` +
-      `speed limit: ${data.rateLimit || '-'}\n` +
-      `queue: ${data.parentQueue || '-'}\n` +
-      `⏱️Idle Timeout: ${data.idleTimeout}\n` +
-      `🫀 Keepalive Timeout: ${data.keepaliveTimeout}\n` +
-      `🔄 Status Autorefresh: ${data.statusAutorefresh}\n` +
-      `👥 Shared Users: ${data.sharedUsers}`;
+      `⚡️ Speed Limit: ${data['rate-limit'] || '-'}\n` +
+      `⏱️ Idle Timeout: ${data['idle-timeout'] || 'none'}\n` +
+      `🫀 Keepalive Timeout: ${data['keepalive-timeout'] || 'none'}\n` +
+      `🔄 Status Autorefresh: ${data['status-autorefresh'] || 'none'}\n` +
+      `👥 Shared Users: ${data['shared-users'] || '1'}`;
   }
 
   // --- Command Registration ---

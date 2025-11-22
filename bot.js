@@ -8,18 +8,18 @@ const path = require("path");
 const { tokenBot, mikrotik: mikrotikConfig } = require("./config.js");
 
 // Services
-const MikrotikService = require("./mikrotik");
+const MikrotikService = require("./mikrotik_service.js");
 
 // Command Handlers and Monitors
-const HotspotLogMonitor = require("./hotpot_monitor");
-const InterfaceMonitor = require('./monitor_interface.js');
-const AddUserCommands = require('./addUser');
-const UserDetailCommands = require('./userDetail');
-const UserListCommands = require('./userHotspot');
-const ProfileCommands = require('./ProfileCommands');
-const StatusCommands = require('./mikrotikStatus');
-const DeleteUserCommands = require('./deleteUser');
-const ActiveUserCommands = require('./userActive');
+const HotspotLogMonitor = require("./hotspot_monitor.js");
+const InterfaceMonitor = require('./interface_monitor.js');
+const AddUserCommands = require('./add_user.js');
+const UserDetailCommands = require('./user_detail.js');
+const UserListCommands = require('./user_hotspot.js');
+const ProfileCommands = require('./profile_commands.js');
+const StatusCommands = require('./mikrotik_status.js');
+const DeleteUserCommands = require('./delete_user.js');
+const ActiveUserCommands = require('./user_active.js');
 
 // ============================================================================
 // INITIALIZATION
@@ -196,7 +196,6 @@ app.post("/api/addusers", async (req, res) => {
   }
 });
 
-const { fetchLog } = require("./mikrotik");
 app.get("/api/log", async (req, res) => {
   try {
     const log = await mikrotikService.fetchLogs(req.query);

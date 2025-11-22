@@ -1,5 +1,5 @@
 const { Markup } = require('telegraf');
-const { createVoucher } = require('./function');
+const { createVoucher } = require('./function.js');
 
 class AddUserCommands {
   constructor(bot, mikrotikService) {

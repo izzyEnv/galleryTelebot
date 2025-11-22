@@ -1,24 +1,41 @@
-const RouterOSClient = require('routeros-client').RouterOSClient;
+const { RouterOSAPI } = require("routeros-api");
 
-const api = new RouterOSClient({
-    host: "192.168.2.1",
+// Konfigurasi koneksi ke MikroTik
+const config = {
+    host: "192.168.110.119",
     user: "admin",
-    password: "123"
-});
+    password: ""
+};
 
-api.connect().then((client) => {
-    // After connecting, the promise will return a client class so you can start using it
+/**
+ * Fungsi sederhana untuk mengambil data /ip/hotspot/server/print dari MikroTik.
+ */
+async function getHotspotServers() {
+    const api = new RouterOSAPI(config);
+    try {
+        // 1. Terhubung ke router
+        await api.connect();
+        console.log("Berhasil terhubung ke router.");
 
-    // You can either use spaces like the winbox terminal or
-    // use the way the api does like "/system/identity", either way is fine
-    client.menu("/system/resource").getOnly().then((result) => {
-        console.log(result); // Mikrotik
-        api.close();
-    }).catch((err) => {
-        console.log(err); // Some error trying to get the identity
-    });
+        // 2. Menjalankan perintah dan mengambil data
+        console.log("Mengambil data /ip/hotspot/server/print...");
+        const servers = await api.write("/ip/hotspot/user/profile/print");
 
-}).catch((err) => {
-    console.log(err);
-    // Connection error
-});
+        // 3. Menampilkan hasil
+        console.log("Data Server Hotspot:");
+        console.log(servers);
+
+    } catch (err) {
+        // Menangani jika ada error
+        console.error("Terjadi kesalahan:", err);
+    } finally {
+        // 4. Selalu pastikan koneksi ditutup
+        if (api.connected) {
+            console.log("Menutup koneksi.");
+            api.close();
+        }
+    }
+}
+
+// Menjalankan fungsi
+getHotspotServers();

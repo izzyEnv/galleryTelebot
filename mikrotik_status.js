@@ -1,4 +1,4 @@
-const { formatUptime, toMiB, toGiB } = require('./function');
+const { formatUptime, toMiB } = require('./function.js');
 
 class StatusCommands {
   constructor(bot, mikrotikService) {
