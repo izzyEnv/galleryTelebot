@@ -1,109 +1,82 @@
 
 const express = require("express");
-const { Telegraf } = require("telegraf");
-const { message } = require("telegraf/filters");
-const { Markup } = require("telegraf");
+const { Telegraf, session } = require("telegraf");
 const cors = require("cors");
 const path = require("path");
-const { session } = require('telegraf');
 
+// Configuration
+const { tokenBot, mikrotik: mikrotikConfig } = require("./config.js");
 
-const {
-  fetchHotspotProfile,
-  fetchHotspotUsers,
-  fetchUserProfile,
-  fetchSystemResource,
-  addUser,
-  detailHotspotProfile,
-  fetchInterface,
-  fetchUserActive,
-  fetchppp,
-  monitorHotspotUserActivity
-} = require("./mikrotik");
+// Services
+const MikrotikService = require("./mikrotik");
 
+// Command Handlers and Monitors
 const HotspotLogMonitor = require("./hotpot_monitor");
+const InterfaceMonitor = require('./monitor_interface.js');
+const AddUserCommands = require('./addUser');
+const UserDetailCommands = require('./userDetail');
+const UserListCommands = require('./userHotspot');
+const ProfileCommands = require('./ProfileCommands');
+const StatusCommands = require('./mikrotikStatus');
+const DeleteUserCommands = require('./deleteUser');
+const ActiveUserCommands = require('./userActive');
 
 // ============================================================================
-// EXPRESS APP SETUP
+// INITIALIZATION
 // ============================================================================
+
+// Services
+const mikrotikService = new MikrotikService(mikrotikConfig);
+
+// Bot
+const bot = new Telegraf(tokenBot);
+bot.use(session());
+
+// Express App
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
 app.use("/", express.static(path.join(__dirname, "src")));
 
-
-const { tokenBot } = require("./config.js")
-const bot = new Telegraf(tokenBot)
-bot.use(session());
-const { mikrotik } = require("./config.js")
-
-// Inisialisasi monitor log hotspot
-const logMonitor = new HotspotLogMonitor();
-
+// ============================================================================
+// BOT COMMANDS & HANDLERS
+// ============================================================================
 bot.command("start", async (ctx) => {
   const helpMessage = `Selamat datang di Bot Monitoring Mikrotik!
 
 Berikut adalah daftar perintah yang tersedia:
 /start - Menampilkan pesan bantuan ini.
 /status - Menampilkan status dan resource dari router Mikrotik.
+/interfaces - Memonitor kecepatan interface secara real-time.
 /listuser - Menampilkan semua pengguna hotspot.
 /useractive - Menampilkan jumlah pengguna hotspot yang sedang aktif.
 /userdetail - Mencari dan menampilkan detail seorang pengguna.
 /adduser - Menambahkan pengguna hotspot baru secara interaktif.
 /deleteuser - Menghapus pengguna hotspot secara interaktif.
 /serverprofile - Menampilkan semua server hotspot yang tersedia.
+/userprofile - Menampilkan semua user profile hotspot yang tersedia.
 /monitor - Mulai monitoring real-time log hotspot (login/logout).
 `
-
   await ctx.reply(helpMessage);
-})
-
-
-
-
-const { addMikrotikUser } = require('./addUser');
-addMikrotikUser(bot);
-
-// register /userdetail handler from detailUser.js
-const { userDetail } = require('./userDetail');
-userDetail(bot);
-
-// register /listuser handler from userHotspot.js
-const { listHotspotUsers } = require('./userHotspot');
-listHotspotUsers(bot);
-
-
-// register handlers (before launching the bot)
-const { registerProfiles } = require('./reply');
-registerProfiles(bot);
-
-// register /status handler from mikrotikStatus
-const { mikrotikStatus } = require('./mikrotikStatus');
-mikrotikStatus(bot);
-
-// register /deleteuser handler from deleteUser.js
-const { deleteUser } = require('./deleteUser');
-deleteUser(bot);
-
-// register /useractive handler from userActive.js
-const { userActive } = require('./userActive');
-userActive(bot);
-
-// register /interfaces handler from interface.js
-const { interfaceMonitor } = require('./monitor_interface.js');
-interfaceMonitor(bot);
-
+});
 
 // small test command to confirm bot is responding
 bot.command('ping', async (ctx) => {
   await ctx.reply('WHAT NIGGA');
 });
 
-// ============================================================================
-// MONITORING COMMANDS
-// ============================================================================
+// Initialize and register all command handlers and monitors
+const logMonitor = new HotspotLogMonitor(mikrotikService);
+new InterfaceMonitor(bot, mikrotikService);
+
+new AddUserCommands(bot, mikrotikService).register();
+new UserDetailCommands(bot, mikrotikService).register();
+new UserListCommands(bot, mikrotikService).register();
+new ProfileCommands(bot, mikrotikService).register();
+new StatusCommands(bot, mikrotikService).register();
+new DeleteUserCommands(bot, mikrotikService).register();
+new ActiveUserCommands(bot, mikrotikService).register();
 
 // Command untuk mulai monitoring real-time
 bot.command("monitor", async (ctx) => {
@@ -160,12 +133,12 @@ bot.on('text', async (ctx) => {
   }
 });
 
-// Launch bot after all handlers are registered
-bot.launch();
-
+// ============================================================================
+// EXPRESS API ENDPOINTS
+// ============================================================================
 app.get("/api/active", async (req, res) => {
   try {
-    const users = await fetchUserActive();
+    const users = await mikrotikService.fetchActiveHotspotUsers();
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -175,7 +148,7 @@ app.get("/api/active", async (req, res) => {
 // Get all hotspot users
 app.get("/api/users", async (req, res) => {
   try {
-    const users = await fetchHotspotUsers("kono");
+    const users = await mikrotikService.fetchHotspotUsers(req.query.name);
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -185,7 +158,7 @@ app.get("/api/users", async (req, res) => {
 // // Get hotspot profiles
 app.get("/api/profile", async (req, res) => {
   try {
-    const profiles = await fetchHotspotProfile("dazai");
+    const profiles = await mikrotikService.fetchHotspotProfiles(req.query.name);
     res.json(profiles);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -195,7 +168,7 @@ app.get("/api/profile", async (req, res) => {
 // // Get user profiles
 app.get("/api/userProfile", async (req, res) => {
   try {
-    const userProfiles = await fetchUserProfile("24-jam");
+    const userProfiles = await mikrotikService.fetchUserProfiles(req.query.name);
     res.json(userProfiles);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -205,7 +178,7 @@ app.get("/api/userProfile", async (req, res) => {
 // Get system resource status
 app.get("/api/status", async (req, res) => {
   try {
-    const resource = await fetchSystemResource();
+    const resource = await mikrotikService.fetchSystemResource();
     res.json(resource);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -216,7 +189,7 @@ app.get("/api/status", async (req, res) => {
 app.post("/api/addusers", async (req, res) => {
   try {
     const userData = req.body;
-    const result = await addUser(mikrotik, userData);
+    const result = await mikrotikService.addHotspotUser(userData);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
@@ -226,20 +199,25 @@ app.post("/api/addusers", async (req, res) => {
 const { fetchLog } = require("./mikrotik");
 app.get("/api/log", async (req, res) => {
   try {
-    const log = await fetchLog();
+    const log = await mikrotikService.fetchLogs(req.query);
     res.json(log);
   } catch (err) {
     res.status(500).json({ error: err.message || err });
   }
 });
 
-
-
+// ============================================================================
+// LAUNCH
+// ============================================================================
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`🤖 Telegram bot is active`);
-  console.log(`📡 MikroTik connection configured for: ${mikrotik.host}`);
 });
+
+bot.launch().then(() => {
+  console.log('🤖 Telegram bot is active');
+  console.log(`📡 MikroTik connection configured for: ${mikrotikConfig.host}`);
+});
+
 // ============================================================================
 // GRACEFUL SHUTDOWN
 // ============================================================================
@@ -253,5 +231,3 @@ process.once("SIGTERM", () => {
   bot.stop("SIGTERM");
   console.log("\n🛑 Bot stopped gracefully");
 });
-
-

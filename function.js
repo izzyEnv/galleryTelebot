@@ -1,4 +1,3 @@
-const { fetchHotspotUsers, addHotspotUser } = require('./mikrotik');
 
 
 // Fungsi untuk format waktu dari "2h17m34s" menjadi "2 hari, 22 jam, 50 menit"
@@ -38,9 +37,9 @@ function toGiB(bytes) {
 }
 
 
-async function generateVoucher() {
+async function generateVoucher(mikrotikService) {
   try {
-    const listUser = await fetchHotspotUsers();
+    const listUser = await mikrotikService.fetchHotspotUsers();
     const existingVouchers = listUser
       .filter(user => user.name?.startsWith('GC'))
       .map(user => user.name);
@@ -65,21 +64,21 @@ async function generateVoucher() {
 }
 
 
-async function createVoucher(profile) {
+async function createVoucher(mikrotikService, profile) {
     try {
         // 1) buat username/password dan comment
-        const username = await generateVoucher(); // menghasilkan string unik GCxxxx
+        const username = await generateVoucher(mikrotikService); // menghasilkan string unik GCxxxx
         const pwd = username;
         // const commentStr = await comment();
 
         // 2) panggil addHotspotUser yang ada di mikrotik.js
-        const created = await addHotspotUser({
+        const created = await mikrotikService.addHotspotUser({
             name: username,
             password: pwd,
             profile: profile,
             comment: 'Created by Bot'
         });
-        // 3) sukses: kembalikan hasil
+        // 3) sukses: kembalikan hasil (created is the response from the API call)
         console.log("User voucher berhasil dibuat:", created);
         return created;
     } catch (err) {

@@ -1,11 +1,10 @@
-const { fetchHotspotLog, monitorHotspotUserActivity } = require('./mikrotik.js');
-
 /**
  * Monitor untuk log hotspot yang dapat diintegrasikan dengan bot Telegram
  */
 class HotspotLogMonitor {
-    constructor() {
+    constructor(mikrotikService) {
         this.lastCheckTime = new Date();
+        this.mikrotikService = mikrotikService;
         this.knownLogs = new Set(); // Untuk menghindari duplikasi
         this.activeMonitor = null; // Instance monitor aktif
         this.isMonitoring = false; // Status monitoring
@@ -23,7 +22,7 @@ class HotspotLogMonitor {
                 year: 'numeric'
             }).toLowerCase() + ` ${this.lastCheckTime.toLocaleTimeString('en-GB')}`;
 
-            const logs = await fetchHotspotLog({
+            const logs = await this.mikrotikService.fetchLogs({
                 limit: 50,
                 fromTime: fromTime
             });
@@ -241,7 +240,7 @@ class HotspotLogMonitor {
             );
 
             // Setup monitoring dengan callback
-            this.activeMonitor = await monitorHotspotUserActivity({
+            this.activeMonitor = this.mikrotikService.monitorHotspotUserActivity({
                 interval,
                 maxLogs,
                 filterEvents,

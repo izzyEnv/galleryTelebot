@@ -1,96 +1,64 @@
 const { RouterOSAPI } = require("routeros-api");
-const { mikrotik } = require("./config.js")
 
-const { ip, user, password } = mikrotik
+class MikrotikService {
+  constructor(config) {
+    this.config = config;
+  }
 
+  /**
+   * A private helper to connect, execute a command, and disconnect.
+   * @param {string} path - The API path to write to.
+   * @param {Array<string>} [params] - Optional parameters for the command.
+   * @returns {Promise<any>}
+   */
+  async _execute(path, params = []) {
+    const conn = new RouterOSAPI(this.config);
+    try {
+      await conn.connect();
+      return await conn.write(path, params);
+    } catch (error) {
+      console.error(`Error executing command '${path}':`, error);
+      throw error;
+    } finally {
+      if (conn.connected) {
+        try {
+          await conn.close();
+        } catch (closeError) {
+          console.error('Error closing API connection:', closeError);
+        }
+      }
+    }
+  }
 
-// ambil data userprofile dari mikrotik
-async function fetchHotspotProfile(name) {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const data = await conn.write("/ip/hotspot/profile/print");
+  async fetchHotspotProfiles(name) {
+    const data = await this._execute("/ip/hotspot/profile/print");
     if (name) {
       return data.find(p => p && p.name === name) || null;
     }
     return data;
-  } catch (error) {
-    console.error('Error in fetchHotspotProfile:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchHotspotProfile:', closeError);
-    }
   }
-}
 
-
-async function fetchHotspotUsers(name) {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const users = await conn.write("/ip/hotspot/user/print");
+  async fetchHotspotUsers(name) {
+    const users = await this._execute("/ip/hotspot/user/print");
     if (name) {
       return users.find(n => n && n.name === name) || null;
     }
     return users;
-  } catch (error) {
-    console.error('Error in fetchHotspotUsers:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchHotspotUsers:', closeError);
-    }
   }
-}
 
-
-async function fetchUserProfile(name) {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const data = await conn.write("/ip/hotspot/user/profile/print");
+  async fetchUserProfiles(name) {
+    const data = await this._execute("/ip/hotspot/user/profile/print");
     if (name) {
       return data.find(p => p && p.name === name) || null;
     }
     return data;
-  } catch (error) {
-    console.error('Error in fetchUserProfile:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchUserProfile:', closeError);
-    }
   }
-}
 
-
-
-async function fetchSystemResource() {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const resource = await conn.write("/system/resource/print");
-    return resource;
-  } catch (error) {
-    console.error('Error in fetchSystemResource:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchSystemResource:', closeError);
-    }
+  async fetchSystemResource() {
+    return this._execute("/system/resource/print");
   }
-}
 
-async function addHotspotUser(userData) {
+  async addHotspotUser(userData) {
   const { name, password, profile, comment } = userData;
 
   if (!name || !password) {
@@ -99,45 +67,28 @@ async function addHotspotUser(userData) {
     throw error;
   }
 
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const newUser = await conn.write('/ip/hotspot/user/add', [
+    const newUser = await this._execute('/ip/hotspot/user/add', [
       `=name=${name}`,
       `=password=${password}`,
       `=profile=${profile || 'default'}`,
       `=comment=${comment || 'Added via Telegram Bot'}`,
     ]);
+
     console.log('User created:', newUser);
     return newUser;
-  } catch (error) {
-    console.error('Error in addHotspotUser:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in addHotspotUser:', closeError);
-    }
   }
-}
 
-
-
-
-async function deleteHotspotUser(userName) {
+  async deleteHotspotUser(userName) {
   if (!userName || typeof userName !== 'string' || !userName.trim()) {
     const error = new Error('User name must be a non-empty string.');
     console.error('Error in deleteHotspotUser - validation failed:', error.message);
     throw error;
   }
   const trimmed = userName.trim();
-
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-
-    const [found] = await conn.write('/ip/hotspot/user/print', [`?name=${trimmed}`]);
+    const conn = new RouterOSAPI(this.config);
+    try {
+        await conn.connect();
+        const [found] = await conn.write('/ip/hotspot/user/print', [`?name=${trimmed}`]);
     if (!found) {
       const error = new Error(`User '${trimmed}' not found.`);
       console.error('Error in deleteHotspotUser - user not found:', error.message);
@@ -148,81 +99,37 @@ async function deleteHotspotUser(userName) {
     console.log(`User '${trimmed}' deleted successfully.`);
 
     return { message: `User '${trimmed}' deleted successfully.`, user: found };
-  } catch (error) {
-    console.error('Error in deleteHotspotUser:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in deleteHotspotUser:', closeError);
+    } catch (error) {
+        console.error('Error in deleteHotspotUser:', error);
+        throw error;
+    } finally {
+        if (conn.connected) {
+            try {
+                await conn.close();
+            } catch (closeError) {
+                console.error('Error closing API connection in deleteHotspotUser:', closeError);
+            }
+        }
     }
   }
-}
 
-async function fetchUserActive(name) {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const users = await conn.write("/ip/hotspot/active/print");
+  async fetchActiveHotspotUsers(name) {
+    const users = await this._execute("/ip/hotspot/active/print");
     if (name) {
-      return users.find(n => n && n.name === name) || null;
+      return users.find(n => n && n.user === name) || null;
     }
     return users;
-  } catch (error) {
-    console.error('Error in fetchUserActive:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchUserActive:', closeError);
-    }
   }
-}
 
-async function fetchInterface(name) {
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const data = await conn.write("/interface/print");
+  async fetchInterfaces(name) {
+    const data = await this._execute("/interface/print");
     if (name) {
-      // Untuk mendapatkan data traffic real-time, Anda mungkin perlu perintah yang berbeda
       return data.find(i => i && i.name === name) || null;
     }
     return data;
-  } catch (error) {
-    console.error('Error in fetchInterface:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchInterface:', closeError);
-    }
   }
-}
-async function fetchLog() {
 
-  const conn = new RouterOSAPI(mikrotik);
-  try {
-    await conn.connect();
-    const data = await conn.write("/log/print");
-    return data;
-  } catch (error) {
-    console.error('Error in fetchLog:', error);
-    throw error;
-  } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchLog:', closeError);
-    }
-  }
-}
-
-// Fungsi untuk mengambil log hotspot (login/logout)
-async function fetchHotspotLog(options = {}) {
+  async fetchLogs(options = {}) {
   const {
     limit = 100,           // Jumlah maksimal log yang diambil
     fromTime,             // Waktu mulai (format: jan/01/2024 10:00:00)
@@ -231,8 +138,8 @@ async function fetchHotspotLog(options = {}) {
     topic                 // Filter berdasarkan topic (hotspot, info, etc.)
   } = options;
 
-  const conn = new RouterOSAPI(mikrotik);
-  try {
+    const conn = new RouterOSAPI(this.config);
+    try {
     await conn.connect();
 
     const query = ['/log/print'];
@@ -266,22 +173,22 @@ async function fetchHotspotLog(options = {}) {
     return hotspotLogs;
 
   } catch (error) {
-    console.error('Error in fetchHotspotLog:', error);
+    console.error('Error in fetchLogs:', error);
     throw error;
   } finally {
-    try {
-      if (conn.connected) conn.close();
-    } catch (closeError) {
-      console.error('Error closing API connection in fetchHotspotLog:', closeError);
-    }
+      if (conn.connected) {
+        try {
+          await conn.close();
+        } catch (closeError) {
+          console.error('Error closing API connection in fetchLogs:', closeError);
+        }
+      }
   }
-}
+  }
 
-// Fungsi khusus untuk monitoring real-time log user hotspot (login/logout)
-async function monitorHotspotUserActivity(options = {}) {
+  monitorHotspotUserActivity(options = {}) {
   const {
     interval = 5000,        // Interval check dalam milliseconds (default: 5 detik)
-    maxLogs = 5,           // Maksimal log yang diproses per interval
     callback,               // Callback function untuk notifikasi
     filterEvents = ['login', 'logout'], // Event yang dimonitor
     includeFailed = true   // Include failed login attempts
@@ -331,10 +238,7 @@ async function monitorHotspotUserActivity(options = {}) {
       }).toLowerCase() + ` ${lastCheckTime.toLocaleTimeString('en-GB')}`;
 
       // Ambil log hotspot terbaru
-      const logs = await fetchHotspotLog({
-        limit: maxLogs,
-        fromTime: fromTime
-      });
+      const logs = await this.fetchLogs({ fromTime });
 
       // Filter log yang belum pernah dilihat
       const newLogs = logs.filter(log => {
@@ -455,22 +359,7 @@ async function monitorHotspotUserActivity(options = {}) {
       console.log('🗑️ Monitoring history cleared');
     }
   };
+  }
 }
 
-
-
-
-
-module.exports = {
-  fetchUserProfile,
-  fetchHotspotProfile,
-  fetchHotspotUsers,
-  fetchSystemResource,
-  addHotspotUser,
-  deleteHotspotUser,
-  fetchUserActive,
-  fetchInterface,
-  fetchHotspotLog,
-  monitorHotspotUserActivity,
-  fetchLog,
-};
+module.exports = MikrotikService;
